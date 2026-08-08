@@ -88,6 +88,18 @@ familiar with LLVM target triples, here is an overview:
 
    Compiled with ``-mcpu=power9 -mtune=power9``.
 
+``ppc64le_power10-unknown-linux-gnu``
+   Linux on 64-bit little-endian PowerPC optimized for POWER10.
+
+   Compiled with ``-mcpu=power10 -mtune=power10``. Requires GCC 12 or later
+   (Debian Bookworm or equivalent).
+
+``ppc64le_power11-unknown-linux-gnu``
+   Linux on 64-bit little-endian PowerPC optimized for POWER11.
+
+   Compiled with ``-mcpu=power11 -mtune=power11``. Requires GCC 15 or later
+   (Debian Sid or equivalent).
+
 ``x86_64_v2-*``
    Targets 64-bit Intel/AMD CPUs approximately newer than
    `Nehalem <https://en.wikipedia.org/wiki/Nehalem_(microarchitecture)>`_

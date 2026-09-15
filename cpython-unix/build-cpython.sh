@@ -1130,6 +1130,16 @@ if xcode_path:
 # -fdebug-default-version is Clang only. Strip so compiling works on GCC.
 replace_in_all("-fdebug-default-version=4", "")
 
+# Target sysroots and GCC installations only exist in the build container.
+# Downstream native extension builds must select their own compiler and linker,
+# without inheriting Clang's cross-compilation flags or build-only paths.
+for flag in os.environ.get("EXTRA_TARGET_CFLAGS", "").split():
+    if (
+        flag.startswith(("--sysroot=", "--gcc-install-dir=", "--target="))
+        or flag in ("-fuse-ld=lld", "-Wno-unused-command-line-argument")
+    ):
+        replace_in_all(flag, "")
+
 # Remove some build environment paths.
 # This is /tools on Linux but can be a dynamic path / temp directory on macOS
 # and when not using container builds.
@@ -1160,8 +1170,19 @@ import importlib.machinery
 import importlib.util
 import json
 import os
+import runpy
 import sys
 import sysconfig
+
+# The cross-build helper reads sysconfig from the unmodified build tree.
+# Use the cleaned installed values for PYTHON.json as well.
+lib_suffix = "t" if os.environ.get("CPYTHON_FREETHREADED") else ""
+sysconfig_data = os.path.join(
+    os.environ["ROOT"], "out", "python", "install", "lib",
+    "python%s%s" % (sysconfig.get_python_version(), lib_suffix),
+    sysconfig._get_sysconfigdata_name() + ".py",
+)
+installed_config_vars = runpy.run_path(sysconfig_data)["build_time_vars"]
 
 # When doing cross builds, sysconfig still picks up abiflags from the
 # host Python, which is never built in debug or free-threaded mode. Patch abiflags accordingly.
@@ -1189,6 +1210,11 @@ extension_suffixes.append(".abi3.so")
 
 extension_suffixes.append(".so")
 
+# Merge into a separate dictionary: newer Python versions can reinitialize
+# sysconfig's cache and restore the unmodified build-tree values.
+config_vars = dict(sysconfig.get_config_vars())
+config_vars.update(installed_config_vars)
+
 metadata = {
     "python_abi_tag": sys.abiflags,
     "python_implementation_cache_tag": sys.implementation.cache_tag,
@@ -1209,7 +1235,7 @@ metadata = {
     "python_exe": "install/bin/python%s%s" % (sysconfig.get_python_version(), sys.abiflags),
     "python_major_minor_version": sysconfig.get_python_version(),
     "python_stdlib_platform_config": sysconfig.get_config_var("LIBPL").lstrip("/"),
-    "python_config_vars": {k: str(v) for k, v in sysconfig.get_config_vars().items()},
+    "python_config_vars": {k: str(v) for k, v in config_vars.items()},
 }
 
 # When cross-compiling, we use a host Python to run this script. There are
@@ -1243,7 +1269,7 @@ ${BUILD_PYTHON} "${ROOT}/generate_metadata.py" "${ROOT}/metadata.json"
 cat "${ROOT}/metadata.json"
 
 if [ "${CC}" != "musl-clang" ]; then
-    objdump -T "${LIBPYTHON_SHARED_LIBRARY}" | grep GLIBC_ | awk '{print $5}' | awk -F_ '{print $2}' | sort -V | tail -n 1 > "${ROOT}/glibc_version.txt"
+    objdump -T "${LIBPYTHON_SHARED_LIBRARY}" | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' | cut -d_ -f2 | sort -V | tail -n 1 > "${ROOT}/glibc_version.txt"
     cat "${ROOT}/glibc_version.txt"
 fi
 

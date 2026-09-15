@@ -86,7 +86,17 @@ familiar with LLVM target triples, here is an overview:
 ``ppc64le_power9-unknown-linux-gnu``
    Linux on 64-bit little-endian PowerPC optimized for POWER9.
 
-   Compiled with ``-mcpu=power9 -mtune=power9``.
+   Compiled with ``-mtune=power9``.
+
+``ppc64le_power10-unknown-linux-gnu``
+   Linux on 64-bit little-endian PowerPC optimized for POWER10.
+
+   Compiled with ``-mtune=power10``.
+
+``ppc64le_power11-unknown-linux-gnu``
+   Linux on 64-bit little-endian PowerPC optimized for POWER11.
+
+   Compiled with ``-mtune=power11``.
 
 ``x86_64_v2-*``
    Targets 64-bit Intel/AMD CPUs approximately newer than

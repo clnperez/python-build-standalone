@@ -111,6 +111,8 @@ def add_target_env(env, build_platform, target_triple, build_env, build_options)
             .replace("x86_64_v3-", "x86_64-")
             .replace("x86_64_v4-", "x86_64-")
             .replace("ppc64le_power9-", "ppc64le-")
+            .replace("ppc64le_power10-", "ppc64le-")
+            .replace("ppc64le_power11-", "ppc64le-")
         )
 
         # On macOS, we support building Linux in a virtualized container that
@@ -246,8 +248,10 @@ def toolchain_archive_path(package_name, host_platform):
     return BUILD / basename
 
 
-def install_binutils(platform):
-    return not platform.startswith("macos_")
+def install_binutils(host_platform, target_triple):
+    if "riscv64" in target_triple or "ppc64le" in target_triple:
+        return False
+    return not host_platform.startswith("macos_")
 
 
 def simple_build(
@@ -271,7 +275,7 @@ def simple_build(
                 BUILD,
                 host_platform,
                 target_triple,
-                binutils=install_binutils(host_platform),
+                binutils=install_binutils(host_platform, target_triple),
                 clang=True,
                 musl="musl" in target_triple,
                 static="static" in build_options,
@@ -392,7 +396,7 @@ def build_libedit(
                 BUILD,
                 host_platform,
                 target_triple,
-                binutils=install_binutils(host_platform),
+                binutils=install_binutils(host_platform, target_triple),
                 clang=True,
                 musl="musl" in target_triple,
                 static="static" in build_options,
@@ -443,7 +447,7 @@ def build_cpython_host(
             BUILD,
             host_platform,
             target_triple,
-            binutils=install_binutils(host_platform),
+            binutils=install_binutils(host_platform, target_triple),
             clang=True,
             static="static" in build_options,
         )
@@ -776,7 +780,7 @@ def build_cpython(
                 BUILD,
                 host_platform,
                 target_triple,
-                binutils=install_binutils(host_platform),
+                binutils=install_binutils(host_platform, target_triple),
                 clang=True,
                 musl="musl" in target_triple,
                 static="static" in build_options,
